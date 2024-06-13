@@ -39,8 +39,11 @@ class DefaultApplicationContextFactory implements ApplicationContextFactory {
 		return getFromSpringFactories(webApplicationType, ApplicationContextFactory::getEnvironmentType, null);
 	}
 
+	//todo 基于默认的ApplicationContextFactory和WebApplicationType来创建环境对象
 	@Override
 	public ConfigurableEnvironment createEnvironment(WebApplicationType webApplicationType) {
+		//todo 这地方会通过Factories的定义的ApplicationContextFactory实现，来执行其中定义的createEnvironment方法
+		//todo 如果没有定义实现的话，就会定义为null
 		return getFromSpringFactories(webApplicationType, ApplicationContextFactory::createEnvironment, null);
 	}
 
@@ -63,6 +66,7 @@ class DefaultApplicationContextFactory implements ApplicationContextFactory {
 		return new GenericApplicationContext();
 	}
 
+	//todo 通过ApplicationContextFactory的实例来创建对应的环境对象或上下文
 	private <T> T getFromSpringFactories(WebApplicationType webApplicationType,
 			BiFunction<ApplicationContextFactory, WebApplicationType, T> action, Supplier<T> defaultResult) {
 		for (ApplicationContextFactory candidate : SpringFactoriesLoader.loadFactories(ApplicationContextFactory.class,

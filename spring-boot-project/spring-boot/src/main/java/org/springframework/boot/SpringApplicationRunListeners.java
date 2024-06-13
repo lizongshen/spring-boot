@@ -46,6 +46,7 @@ class SpringApplicationRunListeners {
 	SpringApplicationRunListeners(Log log, List<SpringApplicationRunListener> listeners,
 			ApplicationStartup applicationStartup) {
 		this.log = log;
+		//todo 把获取到的listeners变成不可变集合
 		this.listeners = List.copyOf(listeners);
 		this.applicationStartup = applicationStartup;
 	}

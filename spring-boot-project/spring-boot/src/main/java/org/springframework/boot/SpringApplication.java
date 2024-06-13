@@ -270,7 +270,9 @@ public class SpringApplication {
 	 * @see #SpringApplication(ResourceLoader, Class...)
 	 * @see #setSources(Set)
 	 */
+	//todo SpringApplication构造函数
 	public SpringApplication(Class<?>... primarySources) {
+		//todo 这里调用了另外一个带resourcesLoader的构造函数
 		this(null, primarySources);
 	}
 
@@ -285,15 +287,31 @@ public class SpringApplication {
 	 * @see #setSources(Set)
 	 */
 	@SuppressWarnings({ "unchecked", "rawtypes" })
+	//todo SpringApplication最终的构造函数
 	public SpringApplication(ResourceLoader resourceLoader, Class<?>... primarySources) {
+		//todo 把resourcesLoader存储到上下文
 		this.resourceLoader = resourceLoader;
+
 		Assert.notNull(primarySources, "PrimarySources must not be null");
+
+		//todo 把primarySources转换成LinkedHashSet并存储到上下文
+		//todo 其中primarySources是一个final不可变类型
 		this.primarySources = new LinkedHashSet<>(Arrays.asList(primarySources));
+
+		//todo 这里通过解析Classpath判断当前Application的类型
 		this.webApplicationType = WebApplicationType.deduceFromClasspath();
+
+		//todo 注册BootstrapRegistryInitializer所有的实现类
 		this.bootstrapRegistryInitializers = new ArrayList<>(
 				getSpringFactoriesInstances(BootstrapRegistryInitializer.class));
+
+		//todo 注册ApplicationContextInitializer所有的实现类
 		setInitializers((Collection) getSpringFactoriesInstances(ApplicationContextInitializer.class));
+
+		//todo 注册ApplicationListener所有的实现类
 		setListeners((Collection) getSpringFactoriesInstances(ApplicationListener.class));
+
+		//todo 把main方法找出来设置到上下文
 		this.mainApplicationClass = deduceMainApplicationClass();
 	}
 
@@ -315,22 +333,55 @@ public class SpringApplication {
 	 * @param args the application arguments (usually passed from a Java main method)
 	 * @return a running {@link ApplicationContext}
 	 */
+	//todo 这里的上下文已经初始化完成
+	//todo 开始运行SpringBoot程序
 	public ConfigurableApplicationContext run(String... args) {
+
+		//todo 这里主要是记录系统的初始化时间
 		Startup startup = Startup.create();
+
+		//todo 默认测试停机的钩子
 		if (this.registerShutdownHook) {
+			//todo shutdownHook是一个静态类SpringApplicationShutdownHook的实例，设置这个实例的停机钩子为启用状态
 			SpringApplication.shutdownHook.enableShutdownHookAddition();
 		}
+
+		//todo 实例化的默认BootstrapContext
+		//todo 调用BootstrapRegistryInitializer所有的实现类，并装载BootstrapContext
+		//todo 这里可以看出来BootstrapRegistryInitializer的实现类执行的优先级很高
 		DefaultBootstrapContext bootstrapContext = createBootstrapContext();
+
+		//todo 创建ConfigurableApplicationContext
+		//todo 其中创建ConfigurableApplicationContext接口继承自ApplicationContext接口
 		ConfigurableApplicationContext context = null;
+
+		//todo 设置一下SYSTEM_PROPERTY_JAVA_AWT_HEADLESS属性（无头模式运行）
+		//todo 会优先使用环境变量，否则就设置为默认值true
 		configureHeadlessProperty();
+
+		//todo 实例化SpringApplicationRunListeners对象
 		SpringApplicationRunListeners listeners = getRunListeners(args);
+
+		//todo 执行所有启动监听器的starting步骤
 		listeners.starting(bootstrapContext, this.mainApplicationClass);
+
 		try {
+			//todo 根据程序参数初始化出来一个ApplicationArguments类
 			ApplicationArguments applicationArguments = new DefaultApplicationArguments(args);
+
+			//todo 准备环境变量
 			ConfigurableEnvironment environment = prepareEnvironment(listeners, bootstrapContext, applicationArguments);
+
+			//todo 打印启动Banner
 			Banner printedBanner = printBanner(environment);
+
+			//todo 通过applicationContextFactory和webApplicationType创建程序上下文
 			context = createApplicationContext();
+
+			//todo 把默认的applicationStartup设置到程序上下文
 			context.setApplicationStartup(this.applicationStartup);
+
+			//todo 基于已获得的对象准备应用程序上下文
 			prepareContext(bootstrapContext, context, environment, listeners, applicationArguments, printedBanner);
 			refreshContext(context);
 			afterRefresh(context, applicationArguments);
@@ -355,12 +406,16 @@ public class SpringApplication {
 		return context;
 	}
 
+	//todo 初始化DefaultBootstrapContext，并加载自定义的实现，装载上下文
 	private DefaultBootstrapContext createBootstrapContext() {
 		DefaultBootstrapContext bootstrapContext = new DefaultBootstrapContext();
+		//todo 这里会调用所有的bootstrapRegistryInitializers的默认的initializer方法
+		//todo 调用initializer方法，会把上下文信息传递到保存到bootstrapContext中
 		this.bootstrapRegistryInitializers.forEach((initializer) -> initializer.initialize(bootstrapContext));
 		return bootstrapContext;
 	}
 
+	//todo 预处理环境变量
 	private ConfigurableEnvironment prepareEnvironment(SpringApplicationRunListeners listeners,
 			DefaultBootstrapContext bootstrapContext, ApplicationArguments applicationArguments) {
 		// Create and configure the environment
@@ -392,10 +447,13 @@ public class SpringApplication {
 		return environmentType;
 	}
 
+	//todo 基于已获得的对象准备程序上下文
 	private void prepareContext(DefaultBootstrapContext bootstrapContext, ConfigurableApplicationContext context,
 			ConfigurableEnvironment environment, SpringApplicationRunListeners listeners,
 			ApplicationArguments applicationArguments, Banner printedBanner) {
+		//todo 设置环境信息到上下文
 		context.setEnvironment(environment);
+
 		postProcessApplicationContext(context);
 		addAotGeneratedInitializerIfNecessary(this.initializers);
 		applyInitializers(context);
@@ -457,18 +515,30 @@ public class SpringApplication {
 		refresh(context);
 	}
 
+	//todo 优先使用环境变量中的值，如果不存在则使用this.headless=true
 	private void configureHeadlessProperty() {
 		System.setProperty(SYSTEM_PROPERTY_JAVA_AWT_HEADLESS,
 				System.getProperty(SYSTEM_PROPERTY_JAVA_AWT_HEADLESS, Boolean.toString(this.headless)));
 	}
 
+	//todo 获取所有监听实例
 	private SpringApplicationRunListeners getRunListeners(String[] args) {
+		//todo 获取参数
 		ArgumentResolver argumentResolver = ArgumentResolver.of(SpringApplication.class, this);
 		argumentResolver = argumentResolver.and(String[].class, args);
+
+		//todo 获取所有SpringApplicationRunListener启动监听器的实例
+		//todo 这里会同时把启动参数传递进去
 		List<SpringApplicationRunListener> listeners = getSpringFactoriesInstances(SpringApplicationRunListener.class,
 				argumentResolver);
+
+		//todo applicationHook是一个ThreadLocal<SpringApplicationHook>的静态空实例
 		SpringApplicationHook hook = applicationHook.get();
+
+		//todo hookListener默认初始化为空，如果applicationHook被提前初始化了，则直接从applicationHook获取
 		SpringApplicationRunListener hookListener = (hook != null) ? hook.getRunListener(this) : null;
+
+		//todo 如果applicationHook被提前初始化，并且包含启动监听器，把applicationHook中的启动监听器，加到现有的启动监听器列表
 		if (hookListener != null) {
 			listeners = new ArrayList<>(listeners);
 			listeners.add(hookListener);
@@ -476,22 +546,30 @@ public class SpringApplication {
 		return new SpringApplicationRunListeners(logger, listeners, this.applicationStartup);
 	}
 
+	//todo 根据接口获取spring工厂的实现类实例的List
 	private <T> List<T> getSpringFactoriesInstances(Class<T> type) {
 		return getSpringFactoriesInstances(type, null);
 	}
 
+	//todo 这里会扫描所有的包，并且从"META-INF/spring.factories"定义中加载实现类
 	private <T> List<T> getSpringFactoriesInstances(Class<T> type, ArgumentResolver argumentResolver) {
 		return SpringFactoriesLoader.forDefaultResourceLocation(getClassLoader()).load(type, argumentResolver);
 	}
 
+	//todo 获取或初始化一个环境对象
 	private ConfigurableEnvironment getOrCreateEnvironment() {
 		if (this.environment != null) {
 			return this.environment;
 		}
+		//todo 根据webApplicationType创建一个可配置的环境类
 		ConfigurableEnvironment environment = this.applicationContextFactory.createEnvironment(this.webApplicationType);
+
+		//todo 如果定义了applicationContextFactory，但是没有创建出来environment，则使用默认工厂创建
 		if (environment == null && this.applicationContextFactory != ApplicationContextFactory.DEFAULT) {
 			environment = ApplicationContextFactory.DEFAULT.createEnvironment(this.webApplicationType);
 		}
+
+		//todo 如果以上均没有，则实例化一个ApplicationEnvironment
 		return (environment != null) ? environment : new ApplicationEnvironment();
 	}
 
@@ -566,6 +644,7 @@ public class SpringApplication {
 		}
 	}
 
+	//todo 从banner.txt中打印，可以输出到日志或者控制台
 	private Banner printBanner(ConfigurableEnvironment environment) {
 		if (this.bannerMode == Banner.Mode.OFF) {
 			return null;
@@ -586,6 +665,7 @@ public class SpringApplication {
 	 * @return the application context (not yet refreshed)
 	 * @see #setApplicationContextFactory(ApplicationContextFactory)
 	 */
+	//todo 通过ApplicationContextFactory的实例和webApplicationType创建应用程序上下文
 	protected ConfigurableApplicationContext createApplicationContext() {
 		return this.applicationContextFactory.create(this.webApplicationType);
 	}
@@ -596,10 +676,12 @@ public class SpringApplication {
 	 * @param context the application context
 	 */
 	protected void postProcessApplicationContext(ConfigurableApplicationContext context) {
+		//todo 如果beanNameGenerator不为空，则注入到默认的bean名称生成器中
 		if (this.beanNameGenerator != null) {
 			context.getBeanFactory()
 				.registerSingleton(AnnotationConfigUtils.CONFIGURATION_BEAN_NAME_GENERATOR, this.beanNameGenerator);
 		}
+
 		if (this.resourceLoader != null) {
 			if (context instanceof GenericApplicationContext genericApplicationContext) {
 				genericApplicationContext.setResourceLoader(this.resourceLoader);
@@ -1349,6 +1431,8 @@ public class SpringApplication {
 	 * @param args the application arguments (usually passed from a Java main method)
 	 * @return the running {@link ApplicationContext}
 	 */
+	//todo SpringBoot 静态函数入口
+	//todo 这里包装一下入口函数，默认只传递一个入口类
 	public static ConfigurableApplicationContext run(Class<?> primarySource, String... args) {
 		return run(new Class<?>[] { primarySource }, args);
 	}
@@ -1360,7 +1444,10 @@ public class SpringApplication {
 	 * @param args the application arguments (usually passed from a Java main method)
 	 * @return the running {@link ApplicationContext}
 	 */
+	//todo SpringBoot的实际入口
+	//todo 其中主函数允许多个
 	public static ConfigurableApplicationContext run(Class<?>[] primarySources, String[] args) {
+		//todo 创建一个新的SpringApplication，并执行run
 		return new SpringApplication(primarySources).run(args);
 	}
 
