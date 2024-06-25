@@ -383,13 +383,23 @@ public class SpringApplication {
 
 			//todo 基于已获得的对象准备应用程序上下文
 			prepareContext(bootstrapContext, context, environment, listeners, applicationArguments, printedBanner);
+
+			//todo 刷新上下文，实例化Bean
 			refreshContext(context);
+
+			//todo 完成实例化bean
 			afterRefresh(context, applicationArguments);
+
+			//todo 程序启动，打印日志
 			startup.started();
 			if (this.logStartupInfo) {
 				new StartupInfoLogger(this.mainApplicationClass).logStarted(getApplicationLog(), startup);
 			}
+
+			//todo 执行程序启动成功的监听
 			listeners.started(context, startup.timeTakenToStarted());
+
+			//todo 执行application的run方法
 			callRunners(context, applicationArguments);
 		}
 		catch (Throwable ex) {
@@ -454,45 +464,73 @@ public class SpringApplication {
 		//todo 设置环境信息到上下文
 		context.setEnvironment(environment);
 
+		//todo 主要处理了属性转换器，顺便还有bean名称生成器和资源加载器
 		postProcessApplicationContext(context);
+
+		//todo 处理AotApplicationContextInitializer初始化
 		addAotGeneratedInitializerIfNecessary(this.initializers);
+
+		//todo 调用所有上下文initialize的方法
 		applyInitializers(context);
+
+		//todo 执行所有listeners的contextPrepared方法
 		listeners.contextPrepared(context);
+
+		//todo ApplicationContext一旦准备好，就发送bootstrapContext关闭事件
 		bootstrapContext.close(context);
+
+		//todo 默认输出启动日志
 		if (this.logStartupInfo) {
 			logStartupInfo(context.getParent() == null);
 			logStartupProfileInfo(context);
 		}
 		// Add boot specific singleton beans
+		//todo 注册springApplicationArguments
 		ConfigurableListableBeanFactory beanFactory = context.getBeanFactory();
 		beanFactory.registerSingleton("springApplicationArguments", applicationArguments);
+		//todo 注册springBootBanner
 		if (printedBanner != null) {
 			beanFactory.registerSingleton("springBootBanner", printedBanner);
 		}
+
+		//todo 设置beanFactory是否运行循环引用和定义重写
 		if (beanFactory instanceof AbstractAutowireCapableBeanFactory autowireCapableBeanFactory) {
 			autowireCapableBeanFactory.setAllowCircularReferences(this.allowCircularReferences);
 			if (beanFactory instanceof DefaultListableBeanFactory listableBeanFactory) {
 				listableBeanFactory.setAllowBeanDefinitionOverriding(this.allowBeanDefinitionOverriding);
 			}
 		}
+
+		//todo 懒加载
+		//todo LazyInitializationBeanFactoryPostProcessor执行，会将beanFactory中的bean设置lazyinit
 		if (this.lazyInitialization) {
 			context.addBeanFactoryPostProcessor(new LazyInitializationBeanFactoryPostProcessor());
 		}
+
+		//todo keepAlive为了解决虚拟线程意外停机问题
 		if (this.keepAlive) {
 			context.addApplicationListener(new KeepAlive());
 		}
+
+		//todo 设置重排属性的post processor
 		context.addBeanFactoryPostProcessor(new PropertySourceOrderingBeanFactoryPostProcessor(context));
 		if (!AotDetector.useGeneratedArtifacts()) {
 			// Load the sources
+			//todo 找到所有的主程序
 			Set<Object> sources = getAllSources();
 			Assert.notEmpty(sources, "Sources must not be empty");
+			//todo 加载所有的beans到应用程序上下文
 			load(context, sources.toArray(new Object[0]));
 		}
+		//todo 执行spring.boot.application.context-loaded事件
 		listeners.contextLoaded(context);
 	}
 
+	//todo 处理AotApplicationContextInitializer初始化
 	private void addAotGeneratedInitializerIfNecessary(List<ApplicationContextInitializer<?>> initializers) {
+		//todo 如果启用了AOT模式
 		if (AotDetector.useGeneratedArtifacts()) {
+			//todo AOT模式下，必须有aotInitializers，没有就报错
 			List<ApplicationContextInitializer<?>> aotInitializers = new ArrayList<>(
 					initializers.stream().filter(AotApplicationContextInitializer.class::isInstance).toList());
 			if (aotInitializers.isEmpty()) {
@@ -503,6 +541,8 @@ public class SpringApplication {
 								+ "or remove the system property 'spring.aot.enabled' to run the application in regular mode");
 				aotInitializers.add(AotApplicationContextInitializer.forInitializerClasses(initializerClassName));
 			}
+
+			//todo 把aotInitializers移动到初始化器的顶部
 			initializers.removeAll(aotInitializers);
 			initializers.addAll(0, aotInitializers);
 		}
@@ -682,6 +722,7 @@ public class SpringApplication {
 				.registerSingleton(AnnotationConfigUtils.CONFIGURATION_BEAN_NAME_GENERATOR, this.beanNameGenerator);
 		}
 
+		//todo 默认情况下resourceLoader是空的
 		if (this.resourceLoader != null) {
 			if (context instanceof GenericApplicationContext genericApplicationContext) {
 				genericApplicationContext.setResourceLoader(this.resourceLoader);
@@ -690,6 +731,10 @@ public class SpringApplication {
 				defaultResourceLoader.setClassLoader(this.resourceLoader.getClassLoader());
 			}
 		}
+
+		//todo addConversionService默认为true
+		//todo ConversionService主要用来做属性转换
+		//todo Specify a ConversionService to use for converting property values, as an alternative to JavaBeans PropertyEditors.
 		if (this.addConversionService) {
 			context.getBeanFactory().setConversionService(context.getEnvironment().getConversionService());
 		}
@@ -765,10 +810,12 @@ public class SpringApplication {
 	 * @param context the context to load beans into
 	 * @param sources the sources to load
 	 */
+	//todo 加载所有的beans到当前的应用程序上下文
 	protected void load(ApplicationContext context, Object[] sources) {
 		if (logger.isDebugEnabled()) {
 			logger.debug("Loading source " + StringUtils.arrayToCommaDelimitedString(sources));
 		}
+		//todo 获取bean definition registry
 		BeanDefinitionLoader loader = createBeanDefinitionLoader(getBeanDefinitionRegistry(context), sources);
 		if (this.beanNameGenerator != null) {
 			loader.setBeanNameGenerator(this.beanNameGenerator);
@@ -779,6 +826,8 @@ public class SpringApplication {
 		if (this.environment != null) {
 			loader.setEnvironment(this.environment);
 		}
+
+		//todo 执行load操作，包括Resource Package Class CharSequence
 		loader.load();
 	}
 
@@ -809,6 +858,7 @@ public class SpringApplication {
 	 * @param context the application context
 	 * @return the BeanDefinitionRegistry if it can be determined
 	 */
+	//todo 获取bean definition registry
 	private BeanDefinitionRegistry getBeanDefinitionRegistry(ApplicationContext context) {
 		if (context instanceof BeanDefinitionRegistry registry) {
 			return registry;
@@ -825,6 +875,7 @@ public class SpringApplication {
 	 * @param sources the sources to load
 	 * @return the {@link BeanDefinitionLoader} that will be used to load beans
 	 */
+	//todo 创建一个新的BeanDefinitionLoader
 	protected BeanDefinitionLoader createBeanDefinitionLoader(BeanDefinitionRegistry registry, Object[] sources) {
 		return new BeanDefinitionLoader(registry, sources);
 	}
@@ -1757,14 +1808,17 @@ public class SpringApplication {
 		@Override
 		public void onApplicationEvent(ApplicationContextEvent event) {
 			if (event instanceof ContextRefreshedEvent) {
+				//todo 在事件中增加一个不停止的线程
 				startKeepAliveThread();
 			}
 			else if (event instanceof ContextClosedEvent) {
+				//todo 终止线程
 				stopKeepAliveThread();
 			}
 		}
 
 		private void startKeepAliveThread() {
+			//todo 启动一个无限休眠的线程
 			Thread thread = new Thread(() -> {
 				while (true) {
 					try {

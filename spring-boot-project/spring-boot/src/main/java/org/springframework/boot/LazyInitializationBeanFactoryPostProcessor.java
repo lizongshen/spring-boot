@@ -57,6 +57,7 @@ public final class LazyInitializationBeanFactoryPostProcessor implements BeanFac
 		for (String beanName : beanFactory.getBeanDefinitionNames()) {
 			BeanDefinition beanDefinition = beanFactory.getBeanDefinition(beanName);
 			if (beanDefinition instanceof AbstractBeanDefinition abstractBeanDefinition) {
+				//todo 设置beanType为懒加载
 				postProcess(beanFactory, filters, beanName, abstractBeanDefinition);
 			}
 		}
@@ -71,6 +72,7 @@ public final class LazyInitializationBeanFactoryPostProcessor implements BeanFac
 		return filters;
 	}
 
+	//todo 设置beanType为懒加载
 	private void postProcess(ConfigurableListableBeanFactory beanFactory,
 			Collection<LazyInitializationExcludeFilter> filters, String beanName,
 			AbstractBeanDefinition beanDefinition) {
@@ -80,6 +82,7 @@ public final class LazyInitializationBeanFactoryPostProcessor implements BeanFac
 		}
 		Class<?> beanType = getBeanType(beanFactory, beanName);
 		if (!isExcluded(filters, beanName, beanDefinition, beanType)) {
+			//todo 设置beanType为懒加载
 			beanDefinition.setLazyInit(true);
 		}
 	}
@@ -121,7 +124,6 @@ public final class LazyInitializationBeanFactoryPostProcessor implements BeanFac
 		public boolean isExcluded(String beanName, BeanDefinition beanDefinition, Class<?> beanType) {
 			return beanDefinition.getRole() == BeanDefinition.ROLE_INFRASTRUCTURE;
 		}
-
 	}
 
 }
